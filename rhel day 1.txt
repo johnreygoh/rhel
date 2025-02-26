@@ -1,0 +1,246 @@
+1. github.com/johnreygoh/rhel
+2. virtualbox and virtualbox extension pack
+3. 1-2 local vms
+
+(latest 9.5)
+(latest 8.10)
+rhel-based distro (1:1 binary):
+-rhel 8/9 developer iso (rhel account!) 1.1GB
+-oracle linux 8/9 iso 13GB
+-rocky linux (dev of centos)
+-alma linux (cloudlinux)
+-fedora
+
+(aws/azure)
+-all of above
+-aws amazon linux 2 / al2023 (rhel)
+-ssh (openssh / putty)
+
+ssh -i rheltraining.pem ec2-user@publicIP
+
+virtualbox
+rctl		# release mouse pointer
+rctl + f	# enter and leave full screen
+
+vbox network (NAT/Internal) -> bridged
+
+before installing vbox guest addons:
+sudo dnf install 
+	tar 
+	bzip2
+	kernel-devel-$(uname -r)
+	kernel-headers
+	perl
+	gcc
+	make
+	elfutils-libelf-devel
+
+sudo dnf install tar bzip2 kernel-devel-$(uname -r) kernel-headers perl gcc make elfutils-libelf-devel
+sudo /run/media/john/vbox-GAs-7.1.6/autorun.sh
+reboot
+
+for rhel (register and activated):
+subscription repositories (query package download)
+
+to register and attach subscription
+subscription-manager register --username john@abc.com --password 123 --auto-attach
+subscription-manager refresh
+
+--------------------------------------------------------------------------------
+rhel 8/9 ol 8/9
+repos:
+-built-in repos
+-install additional repos (vendor)
+
+Extra packages for enterprise linux (epel)
+install additional repo
+sudo dnf install epel-release
+sudo dnf install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+
+-install additional repos (3rd party)
+
+dnf repolist
+
+where is the repo list?
+/etc/yum.repos.d
+
+clear repo cache
+*app/packages download have their source repo cached
+dnf clean all
+
+list group available packages
+dnf grouplist hidden
+
+--------------------------------------------------------------
+
+summary of training lab setup:
+
+vbox
+-install vbox extension
+-install linux
+-setup network (bridged + restart network + ping test)
+-dnf install <packages for the vbox guest addons)
+-install vbox guest addons
+-reboot
+-power options: never blank screen
+-check repos + install epel repos
+sudo dnf install epel-release
+sudo dnf install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+
+-sudo dnf update
+
+amazon ec2
+-launch instance
+-get pem
+-connect ssh
+ssh -i <pemfile> user@publicIP
+
+-----------------------------------------------------------------------
+
+IPA Server (Identity + Policy + Authentication)
+Services (file server, dns server, ntp server, ldap .....)
+
+1. 2 vm scenario
+ipa server(vm)			rhel/ol server(vm)
+-file server			-client
+-ntp
+-dns
+-389
+-ldap
+
+download ova
+vbox->file->import appliance
+
+2. setup own IPA server
+rhel / ol (vm)
+-file server			
+-ntp
+-dns
+-389
+-ldap
+
+3. setup ipa INSIDE rhel vm
+rhel / OL
+package that auto setup all ipa services
+
+-------------------------------------------------------------------
+
+Local repository (yum/dnf)
+1. iso (media.repo)  --> /etc/yum.repos.d/media.repo
+2. add permission
+
+sudo chmod 644 media.repo
+
+file
+user	 	group 		all
+read 4
+write 2
+execute 1
+
+chmod 777 file.txt
+chmod 400
+chmod 644
+
+3. add repo entries
+
+----------------------------------------------------------------
+
+reset password
+1. reset other user password
+sudo passwd <user>
+
+2. reset whichever user account password
+-GRUB Bootloader (not in AWS/AZURE)
+a. press e to edit bootloader
+b. find "linux" line, add rd.break
+c. press ctrl + x
+d. mount -o remount rw /sysroot
+e. chroot /sysroot
+f. passwd
+g. touch /.autorelabel
+h. exit
+i. exit
+ 
+3. aws / azure reset password
+
+-------------------------------------------------------------
+
+service (port 22 ssh) -> firewall   |  <---users
+folders / files -> permissions | <---users
+apps / folders / files / services -> SELinux  | <---users
+
+Security Enhanced Linux (SELinux)
+enforcing (all SELinux policies are running)
+permissive (down SELinux)
+
+sestatus
+getenforce
+
+# change mode (temporary)
+sudo setenforce 0
+
+# modify selinux enforcing/permissive config
+/etc/selinux/config
+
+--------------------------------------------------------------
+
+review users and groups
+pwd				print working directory
+cd /				go to root dir
+cd ~				go to user home dir
+whoami
+echo $USER			see user name
+cat /etc/passwd			see all users
+ls				list all contents
+ls -a				list all contents (includes hidden)
+ls -al				list all incl hidden + permission
+sudo useradd <username>		add a user
+sudo passwd <username>		set password
+cat <file> | grep <searchword>	highlight/filter cat result
+sudo userdel <user>		delete user, keep home dir
+sudo userdel -r <user>		delete user + home dir
+cat /etc/group			list all groups
+sudo groupadd <group>		create group			
+sudo useradd -G mygroup user4	create user + add to group
+sudo usermod -aG mygroup user1	mod user + add to group
+sudo usermod -G "" user1	removes all memberships of this user from all groups
+				except primary group
+sudo groupdel mygroup		deletes the group
+
+---------------------------------------------------------------------------
+connecting to rhel server:
+1. direct / physical
+2. server GUI <--- via rdp
+3. server no-GUI <--- via ssh
+
+SSH
+port 22
+
+systemctl status sshd				#start sshd service
+sudo firewall-cmd --add-service=ssh --permanent
+sudo firewall-cmd --add-port=22/tcp --permanent
+sudo firewall-cmd --reload
+
+configuration file:
+sudo nano /etc/ssh/sshd_config
+
+Listen 0.0.0.0
+PermitRootLogin no
+AllowUser john
+PasswordAuthentication yes
+PubkeyAuthentication no
+
+systemctl restart sshd
+
+ssh john@192.168.254.192
+
+-------------------------------------------------------
+
+IPA server
+password:password
+
+
+
+
+
+
