@@ -1,0 +1,335 @@
+1. rhel based x1 IPA
+2. rhel based x1 client
+------------------------
+ssh -i <pemfile.pem> ec2-user@52.54.105.194
+-----------------------------------------------------------
+
+connect to rhel:
+1. direct
+2. ssh (port:22)
+
+systemctl start sshd
+sudo vim /etc/ssh/sshd_config
+sudo firewall-cmd --add-service=ssh --permanent
+sudo firewall-cmd --add-port=22/tcp --permanent
+sudo firewall-cmd --reload
+
+getenforce
+sudo setenforce=0
+sudo nano /etc/selinux/config
+
+ssh john@123.123.123.123
+
+3. enable Web Admin Interface (cockpit) port 9090
+
+sudo dnf install cockpit
+sudo systemctl start cockpit.socket
+sudo systemctl stop cockpit.socket
+
+sudo systemctl enable --now cockpit.socket
+sudo systemctl disable --now cockpit.socket
+sudo firewall-cmd --add-service=cockpit --permanent
+sudo firewall-cmd --add-port=9090/tcp --permanent
+sudo firewall-cmd --reload
+
+browser:
+http://cockpitserverIP:9090
+
+------------------------------
+*chriz
+sudo vim /etc/yum.repos.d/media.repo		# enabled=0
+sudo dnf clean all
+sudo dnf repolist
+------------------------------
+
+Package Management
+debian-based (debian,ubuntu..)
+-download package (.deb)
+-sudo apt install /home/john/app.deb
+
+- # from repo
+	sudo apt install vscode
+
+rhel-based (rhel, centos, ol, rocky, almalinux)
+-download package (.rpm, *possible to have other extensions .asc)
+-sudo rpm -i /home/john/app.rpm
+
+- # from repo
+	sudo yum install vscode
+	sudo dnf install vscode
+
+dnf commands:
+dnf repolist
+dnf list | grep nginx
+dnf list installed
+dnf search <string>
+dnf info <package>
+dnf upgrade <package>
+dnf upgrade
+dnf remove <package>
+dnf install <package> -y
+dnf install -y <package>
+dnf clean all
+
+-----------------------------------------
+ 
+package:
+1. packaged service + app
+ex:
+	nginx (web server)
+	app
+	service (start/stop, port? 80 http)
+	
+	cockpit (remote webUI)
+	app
+	cockpit.socket service (start/stop, port? 9090)	
+
+1.2 service management
+	*most user installed service
+	/usr/lib/systemd/<servicename>.service
+
+	sudo systemctl status <service>
+	sudo systemctl start <service>
+	sudo systemctl stop <service>
+	sudo systemctl restart <service>
+	sudo systemctl enable --now <service>
+	sudo systemctl disable --now service>
+	
+1.3 firewall
+	sudo firewall-cmd --add-port=80/tcp --permanent
+	sudo firewall-cmd --add-service=http --permanent
+	sudo firewall-cmd --reload
+
+	ftp (app1,app2,app3 | serv1, serv2)
+	http (apache,iis,nginx | apached, iisd, nginx)
+
+1.4 selinux
+	getenforce
+	sudo setenforce 0	
+
+1.5 clean up
+	firewall-cmd --list-all
+	sudo firewall-cmd --remove-port=80/tcp --permanent
+	sudo firewall-cmd --remove-service=cockpit --permanent
+	sudo firewall-cmd --reload
+	sudo dnf remove nginx	
+
+----------------------------------------------------
+
+Services:
+LDAP (Lightweight Directory Authentication Protocol)
+- users and login (identity)
+- Microsoft Active Directory
+- 389 service
+- Identity-Policy-Authentication (IPA) server
+
+	IPA server (user directory)   <--->   IPA client
+
+File Server
+-Samba (share & manage permission)
+
+DNS Server
+-Bind
+
+NTP Server
+-chrony
+
+Web Server
+-nginx / apache / iis
+
+------------------------------------------------------
+
+Network Management
+
+virtualbox
+Network Settings
+-off, add more adapters
+-network attached to?
+	bridged (host-guest ping, vm present in local network, internet)
+	NAT (no host-guest ping, vm not present in local network, internet)
+	internal (no host-guest ping, vms present in SAME internal network name, no internet)
+-name of physical network adapter to use
+-mac address??? can generate new
+
+
+-restart network settings
+sudo systemctl restart NetworkManager
+ifconfig
+ip a
+nmcli connection show
+nmcli con down eth0
+nmcli con up eth0
+
+set ip address:
+ipv4 address
+gateway
+dns
+manual/automatic
+
+# nmcli (temporary)
+nmcli con mod enp0s3 ipv4.method manual
+nmcli con mod enp0s3 ipv4.addresses 192.168.254.199/24
+nmcli con mod enp0s3 ipv4.gateway 192.168.254.254
+nmcli con mod enp0s3 ipv4.dns 8.8.8.8
+nmcli con down enp0s3
+nmcli con up enp0s3
+ip a
+
+# text UI (persistent)
+nmtui
+
+# edit config file
+cat /etc/sysconfig/network-scripts/ifcfg-enp0s3
+sudo vim /etc/sysconfig/network-scripts/ifcfg-enp0s3
+sudo nano /etc/sysconfig/network-scripts/ifcfg-enp0s3
+
+ip address
+subnet mask
+
+multiple vms (internal network, subnet masks, even w/o gateway)
+
+dns
+local dns server / public dns
+domain names / hostnames ------- ip
+
+to config dns:
+check current dns-->
+cat /etc/resolv.conf
+
+to check logs:
+journalctl -xe | grep NetworkManager
+man journalctl
+
+-----------------------------------------------------------
+IPA server
+
+FreeIPA
+services included:
+-Network Time Protocol (NTP) - synchronize time
+-Web Server (Apache) - web server (WEBUI)
+-389 Directory Server - LDAP, Centralized user directory services
+
+			[]LDAP (Users) u1,u2,u3
+			|
+	---------------------------------
+	|	|	|	|	|
+	c1	c2	c3	c4	c5
+
+-Certification Authority (CA) Server - keys public/private
+-kerberos - single-sign on 
+-DNS Server
+
+-------------------------------------------
+
+freeipa setup
+# set hostname
+sudo hostnamectl set-hostname ipaserver
+hostname
+
+# sudo nano /etc/hosts
+192.168.1.222	ipaserver.example.com	ipaserver
+
+hostname: ipaserver
+domain: example.com
+realm: EXAMPLE.COM
+fqdn: ipaserver.example.com
+
+# relax selinux (permissive)
+sudo setenforce 0
+getenforce
+
+# restart machine
+reboot
+
+# download and install freeipa
+sudo dnf install freeipa-server
+
+# if planning to setup as dns server also
+sudo dnf install freeipa-server-dns bind-dyndb-ldap
+
+# Note: (Oracle 8.10)
+# if freeipa-server is not found,
+sudo dnf module list idm
+sudo dnf module enable idm:DL1 -y
+sudo dnf install freeipa-server
+
+# install freeipa-server
+sudo ipa-server-install
+
+DNS Bind : NO
+setup DNS (BIND) ----> public DNS 
+(you have domain name + Public IP)
+
+directory manager password: 12345678
+
+ipa server admin
+admin
+12345678
+
+# ports and service to allow in firewall:
+sudo firewall-cmd --add-service={
+				http,
+				https,
+				dns,
+				ntp,
+				freeipa-ldap,
+				freeipa-ldaps} --permanent
+sudo firewall-cmd --reload
+
+# access IPA web UI
+http://ipaserver.example.com
+
+ipaserver 
+domain (example.com)
+dns integrated (pointing to itself)
+
+
+-----ipaclient-----
+join to domain (example)	/etc/hosts file
+dns pointing to ipaserver	
+
+sudo dnf install ipa-client
+sudo ipa-client-install 
+
+
+------------------------------------------------------
+
+sudo systemctl status httpd
+sudo systemctl status ipa
+sudo systemctl status chronyd
+sudo systemctl status named-pkcs11
+
+-----------------------------------------------------------
+
+ssh = remote connections
+scp = file transfer
+
+scp sourcefile destination
+scp c:\file1.txt user@ip:/home/john/newfilename.txt
+
+using find:
+file files owned by user
+find / -user john -type f
+find / -user john -type f > /home/john/output.txt
+find / -user john -type d
+
+find using filename
+find / -name ifcfg-enp0s3 -type f
+find / -name "*.txt" -type f
+find / -name "d*" -user john -type d
+
+
+
+
+
+
+
+
+
+
+------------------------------------------
+
+
+
+
+
