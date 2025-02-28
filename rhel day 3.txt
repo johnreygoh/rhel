@@ -1,0 +1,382 @@
+day 3
+--------------------------------------------------
+
+vim
+i	insert/edit mode
+esc	read mode
+:w	write
+:q	quit
+:a	abort
+:wq	write and quit
+:wq!	write and quit forced
+
+nano
+ctrl + [key]
+ctrl + o 	write/save
+ctrl + x	exit
+--------------------------------------------------
+cron
+-task scheduler
+-regular interval
+
+dnf install cronie
+man cron
+crontab -l	#lists cron task
+
+						0 & 7 = sunday
+		(0-59)	(0-23)	(1-31)	(1-12)	(0-7)
+		min 	hour 	dom 	mon 	dow 	command
+every 6am	0   	6    	*   	*   	*   	/home/john/script1.sh
+
+every sunday,
+midnight	0	0	*	*	0	poweroff
+
+evry 1st day 
+of month at 3am	0	3	1	*	*	command
+
+evry 5 mins	*/5	*	*	*	*	command
+
+
+---------------------------------------------------------------
+crontab -e
+
+---------------------------------------------
+system-wide cron jobs
+/etc/cron.hourly
+/etc/cron.daily
+/etc/cron.weekly
+/etc/cron.monthly
+
+example
+/etc/cron.hourly/myscript.sh
+
+------------------------------------------------------------
+at
+-schedule single one-time run
+
+dnf install at
+
+1. schedule
+at 14:30
+at 8:00 AM tomorrow
+at 19:00 Monday
+
+2. command?	/home/john/scrip1.sh
+
+3. ctrl + D to save
+4. atq
+5. atrm <job id>
+6. systemctl start atd
+
+---------------------------------------------------------
+
+create file
+touch /home/john/file1.txt
+echo "test" > file2.txt		# create, overwrite
+echo "test" >> file2.txt	# create, append
+truncate -s 10M <filename>	# resizer
+
+tar, gzip, bzip2
+tar (tape archive)
+-archive, no compression
+-.tar
+
+create archive:
+tar -cvf archive1.tar file1.txt file2.txt folder1/
+c	create archive
+v	message (verbose) optional
+f	filename of the archive to create
+
+check contents:
+tar -tvf archive1.tar
+t	see contents
+
+extract contents:
+mkdir archive1
+tar -xvf archive1.tar -C archive1/
+x	extract
+
+
+compression with gunzip(gzip/gz) and bunzip2(bzip2)
+->bzip2 > gzip
+->file.tar.gz / file.tar.bz2
+
+create compressed archive 
+tar + gz
+tar -czvf archive2.tar.gz file*.txt
+z	gzip
+
+tar -tzvf archive2.tar.gz
+t	see contents
+
+tar -xzvf archive2.tar.gz -C folder1/
+x	extract
+
+tar + bz2
+tar -cjvf archive2.tar.bz2 file*.txt
+j	bzip2
+
+tar -tjvf archive2.tar.bz2
+t	see contents
+
+tar -xjvf archive2.tar.bz2 -C folder1/
+x	extract
+
+----------------------------------------------------
+review: user management
+
+sudo useradd user1
+sudo passwd user1
+
+*user template (user defaults)
+/etc/default/useradd
+
+#see useradd defaults
+useradd -D
+
+#files
+/etc/passwd	users & uid
+/etc/shadow	users & secure info (password, lock)
+/etc/group	groups & gid
+
+user (local)
+-name
+-age/expiry
+-password
+-home directory
+-lock?
+
+ben
+home directory = /ben/private
+home directory owner = ben (other users no access to it)
+password = 123
+password age & change password on next login
+
+1. make folder for ben
+sudo mkdir -p /ben/private
+
+2. user add
+sudo useradd ben -d /ben/private
+
+3. set home directory owner to ben
+sudo chown ben:ben /ben/private
+
+4. change permission
+
+user/owner	group		others
+r=4		r=4		r=4
+w=2		w=2		w=2
+x=1		x=1		x=1
+
+chmod 740 /ben/private	
+
+5. set password
+sudo passwd ben
+
+6. set password change and expiry
+sudo chage ben
+
+inactive
+-1	active
+0	undefined
+1	inactive
+
+account expiration
+-1			non expiring
+0			disable
+<positive integer>	days active
+<date>			until when active
+
+
+#add user to sudoers group
+sudo visudo
+sudo usermod -aG wheel ben
+
+#remove ben from all other groups (except primary)
+sudo usermod -G "" ben
+
+# lock  / unlock
+sudo usermod -L ben
+sudo usermod -U ben
+
+useradd
+userdel
+usermod
+
+---------------------------------------------
+review: file and folder permissions
+- file = folder
+- ls -l
+- file / folder permissions [user/owner | group | all]
+- numerical
+read 	4
+write 	2
+execute 1
+
+
+change group ownership
+sudo chown :group1 folder1
+sudo chgrp group1 folder1
+
+-----------------------------------------------
+disk
+-part1	/	/home
+		/etc
+		/opt
+
+-part2 /extra	/adminfile
+
+
+-----------------------------------------------
+processes management
+
+top
+
+test script (script2.sh)
+nano script2.sh
+
+run process in background
+./script2.sh &
+sudo dnf update -y &
+
+check processes in background
+jobs
+
+switch process to foreground
+fg % <process number>
+
+pause process (if fg)
+ctrl + z
+
+move to background
+bg % <process number>
+
+to stop process
+1. move to fg
+2. ctrl + c
+
+to stop / kill process
+-look for the process id
+ps aux
+ps aux | grep script.sh
+
+-kill
+kill <pid>
+
+-use
+top
+press 'k'
+enter process id
+
+-see processes by a spcific user
+ps au -u john
+ps au -u john | grep *.sh
+
+renice
+-set priority of process
+(-20)highest <-> 19lowest
+the lower the number, the higher priority
+below 0 (root privileges)
+
+check priority:
+ps -eo pid,ni,comm
+
+run a process with a spec niceness
+nice -n 10 ./script2.sh
+
+adjust niceness level (renice):
+sudo renice -5 -p <pid>
+
+tuned
+-performance profiles
+
+example:
+-high performance
+-battery saver
+-high throughput
+
+sudo dnf install tuned
+systemctl status tuned
+
+check tuned profiles:
+tuned-adm list
+
+apply a tuned profile:
+sudo tuned-adm profile <profilename>
+
+check current / active profile:
+tuned-adm active
+
+----------------------------------------------------------------
+disk partitioning and file systems
+
+1. add new virtual harddisk
+vbox -> file -> tools -> virtual mdia manage -> add harddrive
+
+2. raw storage (unpartitioned,unformatted(no file system), mounted)
+
+list all disks and partitions:
+lsblk
+
+view partition table
+sudo fdisk -l
+
+create newpartition
+sudo fdisk /dev/sdb
+
+command: n
+partition type: p
+partition number: 1
+first sector: 2048
+last sector: +200M
+command: w
+
+refresh partition table
+sudo partprobe
+
+format partition (set filesystem)
+windows (FAT32/NTFS)
+linux 
+(ext4 - better compat with non-linux)
+sudo mkfs.ext4 /dev/sdb1
+
+(xfs - rhel default)
+sudo mkfs.xfs /dev/sdb1
+
+mount (temporary):
+sudo mkdir -p /mnt/disk2
+sudo mount /dev/sdb1 /mnt/disk2
+df -h | grep /mnt/disk2
+
+mount (permanent):
+sudo blkid /dev/sdb1
+UUID=4483ca2b-b9f6-40f9-a9a9-08d277b905c1
+
+edit fstab:
+sudo nano /etc/fstab
+
+...
+UUID=4483ca2b-b9f6-40f9-a9a9-08d277b905c1 /mnt/disk2 xfs defaults 0 0
+
+
+unmount:
+sudo umount /mnt/disk2
+
+repair filesystem:
+1. unmount
+2. check and repair
+ext4
+sudo fsck.ext4 /dev/sdb1
+
+xfs
+sudo xfs_repair /dev/sdb1
+
+3. mount
+
+
+
+selinux
+shell scripting
+containers (podman)
+server services
+-------------------------------------------------
